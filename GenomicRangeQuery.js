@@ -1,5 +1,11 @@
-// you can use console.log for debugging purposes, i.e.
-// console.log('this is a debug message');
+/*
+the actual algorithm is much more beautiful
+look at second solution with prefix sums for each Nucleo lvl in genom
+http://stackoverflow.com/questions/19552754/java-codility-training-genomic-range-query
+
+theory is here (link from same thread)
+http://en.wikipedia.org/wiki/Range_minimum_query
+*/
 
 function solution(S, P, Q) {
     // write your code in JavaScript (ECMA-262, 5th edition)
