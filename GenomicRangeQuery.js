@@ -5,6 +5,10 @@ http://stackoverflow.com/questions/19552754/java-codility-training-genomic-range
 
 theory is here (link from same thread)
 http://en.wikipedia.org/wiki/Range_minimum_query
+
+and here's better
+http://e-maxx.ru/algo/rmq
+http://web.stanford.edu/class/cs166/lectures/01/Slides01.pdf
 */
 
 function solution(S, P, Q) {
