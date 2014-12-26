@@ -2,6 +2,20 @@
 // console.log('this is a debug message');
 // this gives us only 50% correctness, 28% performance which totals to 38% :((
 
+/*
+http://stackoverflow.com/questions/20660989/max-double-slice-sum
+Elegant and correct solution:
+You can use a modified form of Kadane's algorithm that calculates the MAX Sum subarray ending at each index.
+
+1. For each index, calculate the max_sum_ending_at[i] value by using Kadane's algorithm in forward direction.
+2. For each index, calculate the max_sum_starting_from[i] value by using Kadane's algorithm in reverse direction.
+3. Iterate these arrays simultaneously and choose the 'Y' that has the maximum value of
+
+max_sum_ending_at[Y-1] + max_sum_starting_from[Y+1]
+
+Think twice before coding!
+*/
+
 function solution(A) {
     // write your code in JavaScript (ECMA-262, 5th edition)
     
