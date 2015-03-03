@@ -1,0 +1,10 @@
+.idea/
+.c9/
+node_modules/
+db/
+npm-debug.log
+bread-min.js
+JS-CHROME*
+heroku*
+when*
+ssh*
