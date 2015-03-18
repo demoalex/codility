@@ -1,17 +1,20 @@
 /**
 *   https://app.devdraft.com/#!/workspace/3096ce4f-1f08-437d-bb11-f5bde2e9c6a7
+*   Same task with minimization of line exchange movements
 */
 
 var planYourTrip = function(input) {
     var inf = Infinity;
     var K = 0,
         D = 1,
+        X = 0,
         Lines = [];
 
     if (input && input.constructor === Array) {
         var l = input.shift();
         K = l[0];
         D = l[1];
+        X = l[2];
 
         while(input.length){
             input.shift();
@@ -27,34 +30,11 @@ var planYourTrip = function(input) {
         }
     }
 
-    var twoLinesSolution = function(line1, line2){
-        // stops available for both lines
-        var lastStop = {},
-            res = 0;
-
-        var l1ind = 1, l2ind = 1;
-        while (l1ind < line1.stops.length && l2ind < line2.stops.length) {
-            if(line1.stops[l1ind] === line2.stops[l2ind]){
-                res += typeof lastStop.l1 === "undefined" ? Math.min(line1.prices[l1ind-1],line2.prices[l2ind-1]) :  Math.min(line1.prices[l1ind-1]-line1.prices[lastStop.l1-1],line2.prices[l2ind-1]-line2.prices[lastStop.l2-1]);
-
-                lastStop = {l1: l1ind, l2: l2ind};
-                l1ind++;
-                l2ind++;
-            } else if(line1.stops[l1ind] > line2.stops[l2ind]){
-                l2ind++;
-            } else if(line1.stops[l1ind] < line2.stops[l2ind]){
-                l1ind++;
-            }
-        }
-        res += Math.min(line1.prices[line1.prices.length-1]-line1.prices[lastStop.l1-1],line2.prices[line2.prices.length-1]-line2.prices[lastStop.l2-1]);
-
-        return res;
-    };
-
     var Dijkstra = function(Lines){
         var minPrice = {
                 lineNum: -1,
                 stopNum: 1,
+                lineCrosses: 0,
                 price: inf
             },
             res = 0,
@@ -64,6 +44,7 @@ var planYourTrip = function(input) {
             savedPrices.push({
                 lineNum: i,
                 stopNum: 1,
+                lineCrosses: 0,
                 price: l.prices[0]
             });
 
@@ -73,38 +54,58 @@ var planYourTrip = function(input) {
         });
 
         while(Lines[minPrice.lineNum].stops[minPrice.stopNum] !== D){
-            var nextPrice = {
+            var nextNode = {
                     lineNum: -1,
                     stopNum: 1,
+                    lineCrosses: 0,
                     price: inf
                 };
+
             // minPrice
             // TODO: all lines share same stop
             savedPrices.forEach(function(node) {
                 if(node.completed) return;
-                if(Lines[node.lineNum].stops[node.stopNum] === Lines[minPrice.lineNum].stops[minPrice.stopNum])
-                    node.price = minPrice.price;
+
                 if(node.lineNum === minPrice.lineNum){
                     node.completed = true;
                     // TODO: next stop
-                    var newPrice = {
+                    var newNode = {
                         lineNum: node.lineNum,
                         stopNum: node.stopNum+1,
+                        lineCrosses: node.lineCrosses,
                         price: node.price +  Lines[node.lineNum].prices[node.stopNum]-Lines[node.lineNum].prices[node.stopNum-1]
                     };
-                    savedPrices.push(newPrice);
-                    if (nextPrice.price > newPrice.price){
-                        nextPrice = newPrice;
+                    savedPrices.push(newNode);
+                    if (nextNode.price > newNode.price){
+                        nextNode = newNode;
+                    }
+
+                    return;
+                }
+
+                if(Lines[node.lineNum].stops[node.stopNum] === Lines[minPrice.lineNum].stops[minPrice.stopNum]){
+                    if(minPrice.lineCrosses + 1 <= X) {
+                        var newNode = {
+                            lineNum: node.lineNum,
+                            stopNum: node.stopNum,
+                            lineCrosses: minPrice.lineCrosses + 1,
+                            price: minPrice.price
+                        };
+
+                        savedPrices.push(newNode);
+                        if (nextNode.price > newNode.price){
+                            nextNode = newNode;
+                        }
                     }
                 }
 
-                if(!node.completed && nextPrice.price > node.price){
-                    nextPrice = node;
+                if(!node.completed && nextNode.price > node.price){
+                    nextNode = node;
                 }
             });
 
             // TODO: update minPrice
-            minPrice = nextPrice;
+            minPrice = nextNode;
             // console.log(minPrice);
             // console.log(savedPrices);
         }
@@ -118,11 +119,7 @@ var planYourTrip = function(input) {
                 return Lines[0].prices.pop();
             }
 
-            if(K === 2){
-                return twoLinesSolution(Lines[0], Lines[1]);
-            }
-
-            if(K > 2){
+            if(K > 1){
                 return Dijkstra(Lines);
             }
         },
