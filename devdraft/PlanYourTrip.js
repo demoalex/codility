@@ -140,8 +140,7 @@ if(typeof process !== 'undefined'){
     process.stdin.resume();
     process.stdin.setEncoding('utf8');
 
-    var input = [];
-    var lingeringLine = "";
+
 
     process.stdin.on('data', function(chunk) {
         var lines = chunk.split("\n");
