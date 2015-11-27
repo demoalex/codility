@@ -22,10 +22,10 @@ function Navigator(__rows, __columns, __alarmTime, __errorHandler){
     }
 
     // Paths calculation
-    var _goBackHome = false,
+    var _goBackHome = false, _goToFinish = false,
         _start = null, _finish = null, _kirk = null,
         _path = [], // current path
-        _interrupt = false;
+        _finishIsReachable = false;
 
     function _setStartPoint(r, c){
         if(r > _rows-1 || r < 0)    return __errorHandler('Row index is out of boundaries.');
@@ -36,26 +36,55 @@ function Navigator(__rows, __columns, __alarmTime, __errorHandler){
     }
 
     function _nextMove(){
-        // we've got path to follow
-        if((_path.length && !_interrupt) || _goBackHome){
+        // All bad things are in the past. Go home!
+        if(_goBackHome){
+            __errorHandler("We're going back home :)");
+            return _goTo(_path.pop());
+        } else if(!_goBackHome && _map[_kirk[0]][_kirk[1]] === 'C') {
+            _goBackHome = true;
+            _path = _findPath(_start[0], _start[1], true).reverse();
+            _path.unshift(_start);
+            _path.pop();
+            __errorHandler("Reached C! Heading to teleport.");
+            __errorHandler("Steps to home: "+_path.length);
+            __errorHandler("Alarm in: "+__alarmTime);
+            return _goTo(_path.pop());
+        }
+        // We're firm on alarm fires before we reach teleport
+        if(_goToFinish){
+            __errorHandler("We're going to control room");
             return _goTo(_path.pop());
         }
 
-        // we've reached C, go home fast!
-        if(!_goBackHome && _map[_kirk[0]][_kirk[1]] === 'C'){
-            _goBackHome = true;
-            _path = _findPath(_start[0], _start[1]).reverse();
-            _path.unshift(_start);
-            _path.pop();
-        // not reached yet, just find closest reachable '?'
-        } else {
-            _path = _findPath(_kirk[0], _kirk[1]);
+        // we've got path to follow
+        // but if finish point is not detected yet
+        if(_path.length && !_finish){
+            return _goTo(_path.pop());
         }
 
+        // if finish point is detected we recalculate path each turn
+        // in case there's path to it which is faster then alarm clock
+        if(_finish && _finishIsReachable){
+            __errorHandler("Looking for suitable path to finish...");
+            var p = _findPath(_start[0], _start[1], true);
+            __errorHandler("Path length: " + p.length);
+            __errorHandler("Alarm in: " + __alarmTime);
+            if(p.length <= __alarmTime) {
+                __errorHandler("Suits! Cool :)");
+                _goToFinish = true;
+                _path = _findPath(_kirk[0], _kirk[1], true);
+                return _goTo(_path.pop());
+            }
+            __errorHandler("Path doesn't suit, too long. Kirk will die.");
+        }
+
+        // nothing remarkable happened yet, just find closest reachable '?'
+        _path = _findPath(_kirk[0], _kirk[1]);
         return _goTo(_path.pop());
     }
 
-    function _findPath(row, col){
+    function _findPath(row, col, canReachFinish){
+        if(!canReachFinish) canReachFinish = false;
         var waveMap = [];
         for(var i = 0; i < __rows; i++){
             waveMap.push([]);
@@ -66,7 +95,7 @@ function Navigator(__rows, __columns, __alarmTime, __errorHandler){
         waveMap[row][col] = 0;
 
         var frontier = [[row, col]], steps = 0,
-            newFrontier = [1], forPathGeneration = false;
+            newFrontier = [1], forPathGeneration = [];
         while(newFrontier.length){
             steps++;
             newFrontier = [];
@@ -78,7 +107,7 @@ function Navigator(__rows, __columns, __alarmTime, __errorHandler){
                 if(p && p[0].constructor === Array){
                     return p;
                 } else {
-                    if(p && !forPathGeneration) forPathGeneration = p;
+                    if(p) forPathGeneration.push(p);
                     if(r+1 < _rows
                         && _map[r+1][c] !== '#' && _map[r+1][c] !== '?'
                         && waveMap[r+1][c] === -1){
@@ -108,35 +137,53 @@ function Navigator(__rows, __columns, __alarmTime, __errorHandler){
             frontier = newFrontier;
         }
 
-        if(forPathGeneration){
-            return makePath(forPathGeneration[0], forPathGeneration[1]);
-        } else {
-            return false; //dead end
+        while(forPathGeneration.length){
+            p = forPathGeneration.shift();
+            p = makePath(p[0], p[1]);
+            if(p) return p;
         }
 
+        return false; //dead end
 
         function foundPointOrPath(r, c, steps){
             // C found -> go
             if(r+1 < _rows && _map[r+1][c] == 'C'){
-                waveMap[r+1][c] = steps;
-                return makePath(r+1, c);
+                if(canReachFinish) {
+                    waveMap[r+1][c] = steps;
+                    return makePath(r + 1, c);
+                } else {
+                    _finishIsReachable = true;
+                }
                 //return [r+1, c]
             }
             if(r-1 > 0 && _map[r-1][c] == 'C'){
-                waveMap[r-1][c] = steps;
-                return makePath(r-1, c);
+                if(canReachFinish) {
+                    waveMap[r-1][c] = steps;
+                    return makePath(r-1, c);
+                } else {
+                    _finishIsReachable = true;
+                }
                 //return [r-1, c]
             }
             if(c+1 < _columns && _map[r][c+1] == 'C'){
-                waveMap[r][c+1] = steps;
-                return makePath(r, c+1);
+                if(canReachFinish) {
+                    waveMap[r][c+1] = steps;
+                    return makePath(r, c+1);
+                } else {
+                    _finishIsReachable = true;
+                }
                 //return [r, c+1]
             }
             if(c-1 > 0 && _map[r][c-1] == 'C'){
-                waveMap[r][c-1] = steps;
-                return makePath(r, c-1);
+                if(canReachFinish) {
+                    waveMap[r][c-1] = steps;
+                    return makePath(r, c-1);
+                } else {
+                    _finishIsReachable = true;
+                }
                 //return [r, c-1]
             }
+
 
             // ? found -> go (second priority but only if C not found already)
             if(!_goBackHome){
@@ -224,7 +271,6 @@ function Navigator(__rows, __columns, __alarmTime, __errorHandler){
             if (current_row[i] == '?' && row[i] !== '?')
                 current_row[i] = row[i];
             if (current_row[i] == 'C'){
-                _interrupt = true;
                 _finish = [index, i];
             }
         }
@@ -247,7 +293,7 @@ function Navigator(__rows, __columns, __alarmTime, __errorHandler){
 
         log[_kirk[0]][_kirk[1]] = 'K';
 
-        if(_interrupt) __errorHandler('Control room detected.');
+        if(_finish) __errorHandler('Control room detected.');
         if(_goBackHome) __errorHandler('Go back to teleport.');
         for(var i=0; i < __rows; i++){
             __errorHandler(log[i].join(''));
@@ -292,7 +338,7 @@ input = [
 //    '.?....C',
 //];
 start = [0, 0];
-var N = new Navigator(input.length, input[0].length, console.log);
+var N = new Navigator(input.length, input[0].length, 21, console.log);
 if(!N.getStart()) N.setStart(start[0], start[1]);
 for(var i = 0; i < input.length; i++){
     N.addRow(i, input[i]);
@@ -300,7 +346,7 @@ for(var i = 0; i < input.length; i++){
 }
 
 var c = 0;
-while (c < 45) {
+while (c < 44) {
     N.nextMove();
     console.log('\n\n'+c);
     N.log();
